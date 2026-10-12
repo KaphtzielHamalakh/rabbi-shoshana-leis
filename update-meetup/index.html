@@ -1,14 +1,14 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Post a public meetup · Rabbi Shosh</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f8f5ed;color:#193b43;font:17px/1.5 system-ui,sans-serif}main{max-width:600px;margin:35px auto;padding:24px}h1{font:36px/1.15 Georgia,serif}label{display:block;font-weight:600;margin-top:20px}input,textarea{width:100%;padding:12px;border:1px solid #8c9a97;border-radius:7px;font:inherit;background:#fffdf8;color:#193b43}button,.button{display:inline-block;padding:14px 20px;border:0;border-radius:24px;background:#193b43;color:white;font:inherit;cursor:pointer;text-decoration:none;margin-top:20px}.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}.preview{padding:20px;background:#eee9dc;margin-top:26px;border-left:4px solid #d4b174}small{display:block;color:#53686a}#instructions{padding:18px;background:#eee9dc}a{color:inherit}#copy{background:#ad624b}[hidden]{display:none!important}</style></head><body><main>
 <a href="/">← Back to the website</a><h1>Where to find me</h1><p>Post one public meetup for tomorrow. Times are in New York time.</p>
-<form id="form"><label for="date">Date</label><input id="date" type="date" required>
+<form id="form"><label for="key">Publishing key</label><input id="key" type="password" autocomplete="current-password" required><small>Use a GitHub fine-grained token limited to rabbi-shoshana-leis, with Contents read and write permission. Keep it in your password manager; this form does not store it. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create your publishing key</a>.</small><label for="date">Date</label><input id="date" type="date" required>
 <label for="place">Public place</label><input id="place" placeholder="Rockefeller Preserve" maxlength="120" required>
 <div class="row"><div><label for="start">From</label><input id="start" type="time" required></div><div><label for="end">Until</label><input id="end" type="time" required></div></div>
 <label for="note">Invitation or meeting point</label><textarea id="note" rows="3" maxlength="400" placeholder="Join me for a walk. Meet by the visitor center."></textarea>
 <label for="url">Map or details link (optional)</label><input id="url" type="url" placeholder="https://…">
 <div class="preview"><strong id="previewTitle">Tomorrow’s public meetup</strong><p id="previewText">Enter your plans above to preview the banner.</p></div>
-<button type="submit">Publish with GitHub →</button><small>Sign in to an account with access to the website repository. On GitHub, select “Commit changes” to publish. Your update will be public.</small></form>
-<div id="instructions" hidden><p id="message"></p><button id="copy" type="button">Copy update</button> <a id="editor" class="button" href="#" target="_blank" rel="noopener">Open GitHub editor →</a><textarea id="payload" readonly aria-label="Meetup update" rows="8"></textarea></div>
+<button type="submit">Publish meetup</button><small>Your meetup will be public. Publishing saves directly to your site; no GitHub confirmation is needed.</small></form>
+<div id="instructions" hidden><p id="message"></p></div>
 <script>
 const $=id=>document.getElementById(id);
 const zone="America/New_York";
@@ -18,10 +18,25 @@ function offset(date){const part=new Intl.DateTimeFormat("en-US",{timeZone:zone,
 function clock(time){const [h,m]=time.split(":").map(Number);return (h%12||12)+":"+String(m).padStart(2,"0")+" "+(h>=12?"PM":"AM");}
 function data(){const date=$("date").value;return {date,place:$("place").value.trim(),time:clock($("start").value)+"–"+clock($("end").value)+" ET",endsAt:date+"T"+$("end").value+":00"+offset(date),note:$("note").value.trim(),url:$("url").value.trim()};}
 $("form").addEventListener("input",()=>{if(!$("date").value||!$("start").value||!$("end").value)return;const d=data();$("previewTitle").textContent=d.date+" · "+d.place;$("previewText").textContent=[d.time,d.note].filter(Boolean).join(" · ");});
-$("copy").onclick=async()=>{try{await navigator.clipboard.writeText($("payload").value);$("message").textContent="Copied. Open the editor, select all its text, paste the update, then select Commit changes.";}catch{$("payload").focus();$("payload").select();$("message").textContent="Select and copy the update below, then paste it into the GitHub editor.";}};
-$("form").onsubmit=async e=>{e.preventDefault();if($("end").value<=$("start").value){$("end").setCustomValidity("Choose an end time after the start time.");$("end").reportValidity();return;}$("end").setCustomValidity("");const d=data();if(d.date<day){alert("Please choose today or a future date.");return;}if(d.url&&!d.url.startsWith("https://")){alert("Please use an https:// link.");return;}const value=JSON.stringify(d,null,2)+"\n";const path="meetups/"+d.date+".json";$("payload").value=value;let exists=true;try{const r=await fetch("/"+path+"?check="+Date.now(),{cache:"no-store"});exists=r.ok;}catch{}$("instructions").hidden=false;
-if(exists){$("message").textContent="This date may already have an entry. Copy the update, open the GitHub editor, replace its text, and select Commit changes.";$("editor").href="https://github.com/KaphtzielHamalakh/rabbi-shoshana-leis/edit/main/"+path;}
-else{$("message").textContent="Open GitHub below. The date and meetup are already filled in. Select Commit changes to publish.";$("editor").href="https://github.com/KaphtzielHamalakh/rabbi-shoshana-leis/new/main?"+new URLSearchParams({filename:path,value,message:"Post public meetup for "+d.date});}
-$("instructions").scrollIntoView({behavior:"smooth"});};
+$("form").onsubmit=async e=>{
+e.preventDefault();
+if($("end").value<=$("start").value){$("end").setCustomValidity("Choose an end time after the start time.");$("end").reportValidity();return;}
+$("end").setCustomValidity("");const d=data();
+if(d.date<day){alert("Please choose today or a future date.");return;}
+if(d.url&&!d.url.startsWith("https://")){alert("Please use an https:// link.");return;}
+const button=$("form").querySelector('button[type="submit"]');button.disabled=true;button.textContent="Publishing…";
+$("instructions").hidden=false;$("message").textContent="Saving your public meetup…";
+try{
+const endpoint="https://api.github.com/repos/KaphtzielHamalakh/rabbi-shoshana-leis/contents/meetups/"+d.date+".json";
+const headers={"Authorization":"Bearer "+$("key").value.trim(),"Accept":"application/vnd.github+json","Content-Type":"application/json"};
+const current=await fetch(endpoint+"?ref=main",{headers,cache:"no-store"});let sha;
+if(current.ok)sha=(await current.json()).sha;else if(current.status!==404)throw new Error("Unable to access the repository. Check your publishing key and its permissions.");
+const bytes=new TextEncoder().encode(JSON.stringify(d,null,2)+"\n");let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);
+const body={message:"Post public meetup for "+d.date,content:btoa(binary),branch:"main"};if(sha)body.sha=sha;
+const saved=await fetch(endpoint,{method:"PUT",headers,body:JSON.stringify(body)});
+if(!saved.ok)throw new Error("The update was not saved. Check that your publishing key allows Contents read and write for this repository.");
+$("message").textContent="Saved! The website will update after GitHub Pages finishes publishing, usually within a minute or two.";
+}catch(error){$("message").textContent=error.message;}finally{button.disabled=false;button.textContent="Publish meetup";}
+};
 $("end").oninput=()=>$("end").setCustomValidity("");
 </script></main></body></html>
