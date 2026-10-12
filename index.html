@@ -23,6 +23,7 @@ footer{padding:24px 0;border-top:1px solid #ded7c9;color:#647477;font-size:.8rem
 .teaching{margin:30px 0 12px;max-width:850px;font:clamp(1.5rem,3vw,2.3rem)/1.4 var(--serif);color:var(--ink)}.source{font-size:.8rem;color:var(--soft)}.pillar-intro{max-width:760px;color:var(--soft)}.pillar{border-top:5px solid var(--gold);margin-top:22px}.pillar>p[lang=he]{font:1.7rem var(--serif);color:var(--rust);text-align:left;margin-bottom:20px}.pillar>a{display:inline-block;margin-top:22px;font-size:.85rem}.pillars{border-bottom:1px solid var(--sand)}
 nav{flex-wrap:wrap;padding-top:16px;padding-bottom:16px}.links{flex-wrap:wrap;justify-content:flex-end}@media(max-width:760px){nav{gap:12px}.links{width:100%;justify-content:flex-start}.hero{padding-top:170px}}
 .wedding-reviews{grid-template-columns:repeat(2,minmax(0,1fr))}.wedding-reviews figure:first-child{grid-column:1/-1}#testimonials .wedding-reviews blockquote{font-size:1.15rem;line-height:1.7}#testimonials .wedding-reviews blockquote p{margin-bottom:16px}#testimonials .review-summary{margin-bottom:20px}@media(max-width:760px){.wedding-reviews{grid-template-columns:1fr}}
+.meetup-banner{padding:25px 0;background:#eee9dc;border-bottom:1px solid #d4b174}.meetup-inner{display:flex;align-items:center;justify-content:space-between;gap:24px}.meetup-banner h2{font-size:1.75rem;margin:0 0 6px}.meetup-banner p{margin:0}.meetup-banner .label{margin-bottom:8px}.meetup-details{color:var(--soft)}@media(max-width:760px){.meetup-inner{align-items:flex-start;flex-direction:column;gap:12px}}
 </style>
 </head>
 <body>
@@ -37,6 +38,7 @@ nav{flex-wrap:wrap;padding-top:16px;padding-bottom:16px}.links{flex-wrap:wrap;ju
 <div class="actions"><a class="button" href="#about">Get to know me</a><a class="text-link" href="#connect">Write to Rabbi Shosh</a></div></div>
 <figure class="portrait-frame"><img class="portrait" src="https://images.squarespace-cdn.com/content/v1/63c96f8a480afe573d5f22c3/64036901-c7b8-4372-a92f-b1bdb4be8782/rabbi-shosh-photo_orig.jpeg?format=750w" alt="Rabbi Shoshana Leis" fetchpriority="high"></figure>
 </div></section>
+<section class="meetup-banner" id="public-meetup" aria-label="Public meetup"><div class="wrap meetup-inner"><div><p class="label">Where to find me</p><h2 id="meetup-title">My next public meetup</h2><p class="meetup-details" id="meetup-details">I’ll post the place and time here the night before. Check back for an invitation to join me.</p></div><a id="meetup-link" class="button" href="#connect">Ask about meeting up</a></div></section>
 <section class="content wrap" id="about"><div class="about-grid">
 <div><p class="label">A little about me</p><h2>Jewish life is something we make together.</h2></div>
 <div class="bio"><p>I’m Rabbi Shoshana Leis, co-rabbi of <a href="https://www.shalompcs.com/">Pleasantville Community Synagogue</a>. My rabbinate is rooted in justice, compassion, creativity, teshuva, peace, generosity, and listening in order to learn.</p>
@@ -89,4 +91,23 @@ nav{flex-wrap:wrap;padding-top:16px;padding-bottom:16px}.links{flex-wrap:wrap;ju
 </div></section>
 </main>
 <footer><div class="wrap footer-row"><span>© 2026 Rabbi Shoshana Leis</span><a href="https://www.shalompcs.com/">Pleasantville Community Synagogue</a></div></footer>
+<script id="public-meetup-data" type="application/json">null</script>
+<script>
+(function () {
+  // Set one public invitation: {"date":"YYYY-MM-DD","place":"...","time":"...","endsAt":"YYYY-MM-DDTHH:mm:ss-04:00","note":"...","url":"https://..."}
+  const entry = JSON.parse(document.getElementById("public-meetup-data").textContent);
+  if (!entry) return;
+  const today = new Intl.DateTimeFormat("en-CA", {timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date) || entry.date < today) return;
+  if (entry.endsAt && (!Number.isFinite(Date.parse(entry.endsAt)) || Date.now() >= Date.parse(entry.endsAt))) return;
+  const dateLabel = entry.date === today ? "Today" : new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York",weekday:"long",month:"long",day:"numeric"}).format(new Date(entry.date+"T12:00:00-04:00"));
+  document.getElementById("meetup-title").textContent = dateLabel + " · " + entry.place;
+  document.getElementById("meetup-details").textContent = [entry.time,entry.note].filter(Boolean).join(" · ");
+  if (entry.url && /^https:\/\//.test(entry.url)) {
+    const link = document.getElementById("meetup-link");
+    link.href = entry.url;
+    link.textContent = "Meetup details →";
+  }
+})();
+</script>
 </body></html>
